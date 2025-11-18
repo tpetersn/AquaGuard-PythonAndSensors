@@ -107,23 +107,41 @@ async def main():
             msg = packet.data.decode("utf-8")
             payload = json.loads(msg)
             cmd = payload.get("cmd")
-            print("📩 Received:", cmd)
 
+            # --- Joystick analog direction ---
+            if cmd == "set_direction":
+                y = float(payload.get("x", 0))
+                x = float(payload.get("y", 0))
+                serial_msg = f"DIR {x:.3f} {y:.3f}"
+                send_cmd(serial_msg)
+                return
+
+            # --- Speed control ---
+            if cmd == "set_speed":
+                speed = int(payload.get("value", 50))
+                serial_msg = f"SPEED {speed}"
+                print("📩 Speed:", serial_msg)
+                send_cmd(serial_msg)
+                return
+
+            # --- Simple fallback digital commands ---
+            print("📩 Received:", cmd)
             if cmd == "forward":
-                move_forward()
+                send_cmd("DIR 0 -1")
             elif cmd == "back":
-                move_back()
+                send_cmd("DIR 0 1")
             elif cmd == "left":
-                turn_left()
+                send_cmd("DIR -1 0")
             elif cmd == "right":
-                turn_right()
+                send_cmd("DIR 1 0")
             elif cmd == "stop":
-                stop_motors()
+                send_cmd("DIR 0 0")
             else:
                 print("⚠️ Unknown command:", cmd)
 
         except Exception as e:
             print("❌ Error decoding command:", e)
+
 
     await room.connect(ROOM_URL, TOKEN)
 
