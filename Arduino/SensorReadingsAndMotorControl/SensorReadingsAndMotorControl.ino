@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
+#include<Math.h>
 
 // ===================================
 // === MOTOR & SERVO DEFINITIONS ===
@@ -265,14 +266,33 @@ void loop() {
         // --- Accelerometer Reading ---
         sensors_event_t event;
         accel.getEvent(&event);
+
+        // Raw acceleration values (m/s^2 with Adafruit library)
+        float ax = event.acceleration.x;
+        float ay = event.acceleration.y;
+        float az = event.acceleration.z;
+
+        // --- Compute Pitch, Roll, and Tilt ---
+        // Pitch: forward/back tilt
+        float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
+
+        // Roll: left/right tilt
+        float roll  = atan2(ay, az) * 180.0 / PI;
+
+        // Total Tilt angle from "upright" (angle between Z-axis and gravity vector)
+        float norm = sqrt(ax * ax + ay * ay + az * az);
+        if (norm == 0) norm = 1;  // avoid division by zero
+        float tilt = acos(az / norm) * 180.0 / PI;
+
+        // Orientation label (keep your old logic so nothing breaks)
         const char* orientation;
-        if (event.acceleration.z < -0.5)      orientation = "Upside Down";
-        else if (event.acceleration.z > 6.0)  orientation = "Upright";
-        else                                  orientation = "Tilted";
-        
+        if (az < -0.5)      orientation = "Upside Down";
+        else if (az > 6.0)  orientation = "Upright";
+        else                orientation = "Tilted";
+
         // --- Output Sensor Data for Python Gateway ---
-        // Format: DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Orient=Upright
-        // This structured format is easy for the Python regex to parse.
+        // Example:
+        // DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Pitch=12.34,Roll=-3.21,Tilt=15.67,Orient=Upright
         Serial.print("DATA:T1=");
         (tempC1 <= -100.0f) ? Serial.print("ERR") : Serial.print(tempC1, 2);
         Serial.print(",T2=");
@@ -281,10 +301,20 @@ void loop() {
         Serial.print(tdsValue, 0);
         Serial.print(",pH=");
         Serial.print(pH, 2);
+
         Serial.print(",AccelZ=");
-        Serial.print(event.acceleration.z, 2);
+        Serial.print(az, 2);
+
+        Serial.print(",Pitch=");
+        Serial.print(pitch, 2);
+
+        Serial.print(",Roll=");
+        Serial.print(roll, 2);
+
+
         Serial.print(",Orient=");
         Serial.println(orientation);
+
     }
 
     // --- 4. Motor/Rudder Serial Control ---

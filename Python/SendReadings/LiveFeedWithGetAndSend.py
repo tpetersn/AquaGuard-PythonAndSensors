@@ -153,14 +153,20 @@ async def sensor_reader_task():
                     tds_str = data.get("TDS", "0")
                     ph_str  = data.get("pH", "7.0")
                     orientation = data.get("Orient", "Unknown")
+                    pitch_str = data.get("Pitch")
+                    roll_str = data.get("Roll")
+                    
 
                     temperature = float(t1_str) if t1_str != "ERR" else None
                     tds = float(tds_str)
                     ph = float(ph_str)
 
+                    pitch = float(pitch_str) if pitch_str not in (None, "ERR", "") else None
+                    roll  = float(roll_str)  if roll_str  not in (None, "ERR", "") else None
+
                     print("-" * 25)
                     print(f"🌡️ T1={temperature}°C | pH={ph} | TDS={tds}")
-                    print(f"📐 Orientation: {orientation}")
+                    print(f"📐 Orientation: {orientation} | Pitch={pitch}° | Roll={roll}°")
 
                     # Post the reading
                     response = post_reading(
