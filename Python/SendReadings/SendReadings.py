@@ -44,7 +44,7 @@ def _get_valid_token():
 
 
 def post_reading(device_id, temperature=None, ph=None, chlorine=None,
-                 tds=None, battery_voltage=None, battery_percentage=None):
+                 tds=None, battery_voltage=None, battery_percentage=None, pitch=None, roll=None):
     """
     Post a sensor reading to the backend.
     """
@@ -60,7 +60,9 @@ def post_reading(device_id, temperature=None, ph=None, chlorine=None,
         "chlorine": chlorine,
         "tds": tds,
         "batteryVoltage": battery_voltage,
-        "batteryPercentage": battery_percentage
+        "batteryPercentage": battery_percentage,
+        "pitch": pitch,
+        "roll": roll
     }
 
     # remove None values
@@ -88,6 +90,8 @@ if __name__ == "__main__":
         tds = safe_float("TDS (ppm): ")
         battery_voltage = safe_float("Battery Voltage (V): ")
         battery_percentage = safe_float("Battery Percentage (%): ")
+        pitch = safe_float("Pitch: ")
+        roll = safe_float("Roll: ")
 
         result = post_reading(
             device_id,
@@ -96,7 +100,9 @@ if __name__ == "__main__":
             chlorine=chlorine,
             tds=tds,
             battery_voltage=battery_voltage,
-            battery_percentage=battery_percentage
+            battery_percentage=battery_percentage,
+            pitch=pitch,
+            roll=roll
         )
         print("✅ Reading posted successfully:", result)
 
