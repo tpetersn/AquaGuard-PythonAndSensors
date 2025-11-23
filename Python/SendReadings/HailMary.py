@@ -131,6 +131,7 @@ async def sensor_reader_task():
 
             # Attempt to parse the structured DATA line
             match = DATA_PATTERN.search(line)
+            printf(match)
             if match:
                 try:
                     tempC1_str, tempC2_str, tds_str, ph_str, accelZ_str, orientation = match.groups()
