@@ -117,7 +117,7 @@ void stopMotor() {
 void driveSingleMotor(float x, float y) {
     // Throttle control (X)
     if (abs(x) < deadzone) x = 0;
-    int pwmValue = abs(x) * maxPWM;
+    int pwmValue = maxPWM;
 
     if (x > 0) {
         analogWrite(LPWM, 0);
