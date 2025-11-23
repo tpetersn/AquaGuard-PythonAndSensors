@@ -84,9 +84,24 @@ def get_token():
 def fetch_auto_mode():
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(SETTINGS_URL, headers=headers)
-    r.raise_for_status()
-    return r.json().get("autoRoamOn", False)
+
+    try:
+        print("🔎 Checking auto mode…")
+        r = requests.get(SETTINGS_URL, headers=headers)
+        print("📡 Status:", r.status_code)
+
+        data = r.json()
+        print("📦 Response:", data)
+
+        mode = data.get("autoRoamOn", False)
+        print("🤖 autoRoamOn =", mode)
+
+        return mode
+
+    except Exception as e:
+        print("❌ ERROR fetching auto mode:", e)
+        print("🔁 Defaulting to MANUAL")
+        return False
 
 
 # ======================================================
