@@ -302,14 +302,14 @@ void loop() {
         // DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Pitch=12.34,Roll=-3.21,Tilt=15.67,Orient=Upright
 
 
-        // Serial.print("DATA:");
-        // Serial.print("T1="); Serial.print(tempC1, 2);
-        // Serial.print(",T2="); Serial.print(tempC2, 2);
-        // Serial.print(",TDS="); Serial.print(tdsValue, 0);
-        // Serial.print(",pH=");  Serial.print(pH, 2);
-        // Serial.print(",Orient="); Serial.println(orientation);
-        // Serial.print(",Pitch="); Serial.println(pitch);
-        // Serial.print(",Roll="); Serial.println(roll);
+        Serial.print("DATA:");
+        Serial.print("T1="); Serial.print(tempC1, 2);
+        Serial.print(",T2="); Serial.print(tempC2, 2);
+        Serial.print(",TDS="); Serial.print(tdsValue, 0);
+        Serial.print(",pH=");  Serial.print(pH, 2);
+        Serial.print(",Orient="); Serial.println(orientation);
+        Serial.print(",Pitch="); Serial.println(pitch);
+        Serial.print(",Roll="); Serial.println(roll);
         
 
 
@@ -338,10 +338,10 @@ void loop() {
                 float x = xs.toFloat();   // throttle
                 float y = ys.toFloat();   // rudder
 
-                Serial.print("Parsed throttle x = ");
-                Serial.println(x);
-                Serial.print("Parsed rudder y   = ");
-                Serial.println(y);
+                // Serial.print("Parsed throttle x = ");
+                // Serial.println(x);
+                // Serial.print("Parsed rudder y   = ");
+                // Serial.println(y);
 
                 driveSingleMotor(x, y);
             }
@@ -350,8 +350,8 @@ void loop() {
             int val;
             if (sscanf(line.c_str(), "SPEED %d", &val) == 1) {
                 maxPWM = map(val, 0, 100, 0, 255);
-                Serial.print("Max speed set to: ");
-                Serial.println(maxPWM);
+                // Serial.print("Max speed set to: ");
+                // Serial.println(maxPWM);
             }
         }
         // Ignore lines that are not DIR or SPEED (like the sensor DATA line)

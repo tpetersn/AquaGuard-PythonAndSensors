@@ -181,18 +181,19 @@ async def sensor_reader_task():
                         roll=roll
                     )
 
-                    #print(
-                        "✅ Reading sent successfully:",
-                        getattr(response, "status_code", "OK")
-                    )
+                    # #print(
+                    #     "✅ Reading sent successfully:",
+                    #     getattr(response, "status_code", "OK")
+                    # )
                     #print("-" * 25)
 
                 except Exception as e:
-                    #print(f"❌ Error processing DATA line '{line}': {e}")
+                    print(f"❌ Error processing DATA line '{line}': {e}")
 
             else:
                 # Any other message from Arduino (debug, motor feedback, etc.)
                 #print(f"💬 Arduino Message: {line}")
+                pass
 
     # Main async loop: call blocking reader in a thread repeatedly
     while True:
