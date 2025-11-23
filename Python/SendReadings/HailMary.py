@@ -16,7 +16,7 @@ ROOM_URL = "wss://pbrobot-ir91vwzj.livekit.cloud"
 TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=pool"
 
 # Update this to your actual serial port. On Windows "COM3", on Raspberry Pi "/dev/ttyACM0" or "/dev/ttyUSB0".
-ARDUINO_PORT = "COM3"
+ARDUINO_PORT = "/dev/ttyUSB0"
 BAUD = 9600
 
 DEVICE_ID = "68cc90c7ef0763dddf1a5e9d"
