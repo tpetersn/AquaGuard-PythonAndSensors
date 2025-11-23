@@ -198,12 +198,17 @@ void setup() {
 // =================================================================
 // ♾️ LOOP
 // =================================================================
+
+//this for the time for sampling and sending readings
+const unsigned long SENSOR_PERIOD_MS = 15000UL;  // 15 seconds (adjust as needed)
+
+
 void loop() {
     unsigned long now = millis();
 
     // --- 1. Non-blocking TDS Sampling (every 40ms) ---
-    if (now - tdsSampleTimepoint >= 40U) {
-        tdsSampleTimepoint += 40U;
+    if (now - tdsSampleTimepoint >= SENSOR_PERIOD_MS) {
+        tdsSampleTimepoint += SENSOR_PERIOD_MS;
         tdsAnalogBuffer[tdsAnalogBufferIndex] = analogRead(TDS_SENSOR);
         tdsAnalogBufferIndex++;
         if (tdsAnalogBufferIndex == SCOUNT) {
@@ -213,8 +218,10 @@ void loop() {
 
     // --- 2. Non-blocking pH Sampling (every 20ms, for 10 samples) ---
     // This simulates the original delay(20) * 10 samples for averaging
-    if (now - phSampleTimepoint >= 20U) {
-        phSampleTimepoint += 20U;
+
+
+    if (now - phSampleTimepoint >= SENSOR_PERIOD_MS) {
+        phSampleTimepoint += SENSOR_PERIOD_MS;
         if (phSampleCount < PH_N) {
             phSum += analogRead(PH_SENSOR);
             phSampleCount++;
@@ -223,8 +230,8 @@ void loop() {
 
 
     // --- 3. 5-Second Sensor Reading & Reporting ---
-    if (now - printTimepoint >= 5000U) {
-        printTimepoint += 5000U;
+    if (now - printTimepoint >= SENSOR_PERIOD_MS) {
+        printTimepoint += SENSOR_PERIOD_MS;
 
         // --- pH Calculation (uses accumulated sum from samples) ---
         if (phSampleCount == PH_N) {
@@ -293,27 +300,22 @@ void loop() {
         // --- Output Sensor Data for Python Gateway ---
         // Example:
         // DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Pitch=12.34,Roll=-3.21,Tilt=15.67,Orient=Upright
-        Serial.print("DATA:T1=");
-        (tempC1 <= -100.0f) ? Serial.print("ERR") : Serial.print(tempC1, 2);
-        Serial.print(",T2=");
-        (tempC2 <= -100.0f) ? Serial.print("ERR") : Serial.print(tempC2, 2);
-        Serial.print(",TDS=");
-        Serial.print(tdsValue, 0);
-        Serial.print(",pH=");
-        Serial.print(pH, 2);
-
-        Serial.print(",AccelZ=");
-        Serial.print(az, 2);
-
-        Serial.print(",Pitch=");
-        Serial.print(pitch, 2);
-
-        Serial.print(",Roll=");
-        Serial.print(roll, 2);
 
 
-        Serial.print(",Orient=");
-        Serial.println(orientation);
+        Serial.print("DATA:");
+        Serial.print("T1="); Serial.print(tempC1, 2);
+        Serial.print(",T2="); Serial.print(tempC2, 2);
+        Serial.print(",TDS="); Serial.print(tdsValue, 0);
+        Serial.print(",pH=");  Serial.print(pH, 2);
+        Serial.print(",Orient="); Serial.println(orientation);
+        Serial.print(",Pitch="); Serial.println(pitch);
+        Serial.print(",Roll="); Serial.println(roll);
+
+
+
+
+
+        
 
     }
 
