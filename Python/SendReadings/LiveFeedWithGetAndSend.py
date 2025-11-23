@@ -50,7 +50,7 @@ def init_arduino():
         # Use a non-blocking timeout of 0 to poll the serial port quickly
         arduino = serial.Serial(ARDUINO_PORT, BAUD, timeout=0)
         time.sleep(2)  # Wait for Arduino auto-reset
-        print(f"🔌 Arduino connected on {ARDUINO_PORT} at {BAUD} baud!")
+        #print(f"🔌 Arduino connected on {ARDUINO_PORT} at {BAUD} baud!")
         arduino.reset_input_buffer()
     except Exception as e:
         print("❌ Could not connect to Arduino:", e)
@@ -59,7 +59,7 @@ def send_cmd(cmd: str):
     """Send simple text command to Arduino."""
     if arduino and arduino.is_open:
         arduino.write((cmd + "\n").encode("utf-8"))
-        print("➡️ Sent to Arduino:", cmd)
+        #print("➡️ Sent to Arduino:", cmd)
     else:
         print("⚠️ Arduino not connected! Command failed:", cmd)
 
@@ -115,7 +115,7 @@ async def sensor_reader_task():
         print("Sensor reader stopped: Arduino not initialized.")
         return
 
-    print("📡 Sensor reader task started. Awaiting data...")
+    #print("📡 Sensor reader task started. Awaiting data...")
 
     # Blocking function that will be run in a separate thread
     def read_and_process():
@@ -123,14 +123,14 @@ async def sensor_reader_task():
             try:
                 line = arduino.readline().decode("utf-8", errors="ignore").strip()
             except Exception as e:
-                print(f"❌ Error reading from Arduino: {e}")
+                #print(f"❌ Error reading from Arduino: {e}")
                 return
 
             if not line:
                 return
 
             # Debug: show the raw line exactly as received
-            print("🔎 Raw line from Arduino:", repr(line))
+            #print("🔎 Raw line from Arduino:", repr(line))
 
             # Only parse lines that start with "DATA:"
             if line.startswith("DATA:"):
@@ -164,9 +164,9 @@ async def sensor_reader_task():
                     pitch = float(pitch_str) if pitch_str not in (None, "ERR", "") else None
                     roll  = float(roll_str)  if roll_str  not in (None, "ERR", "") else None
 
-                    print("-" * 25)
-                    print(f"🌡️ T1={temperature}°C | pH={ph} | TDS={tds}")
-                    print(f"📐 Orientation: {orientation} | Pitch={pitch}° | Roll={roll}°")
+                    #print("-" * 25)
+                    #print(f"🌡️ T1={temperature}°C | pH={ph} | TDS={tds}")
+                    #print(f"📐 Orientation: {orientation} | Pitch={pitch}° | Roll={roll}°")
 
                     # Post the reading
                     response = post_reading(
@@ -181,18 +181,18 @@ async def sensor_reader_task():
                         roll=roll
                     )
 
-                    print(
+                    #print(
                         "✅ Reading sent successfully:",
                         getattr(response, "status_code", "OK")
                     )
-                    print("-" * 25)
+                    #print("-" * 25)
 
                 except Exception as e:
-                    print(f"❌ Error processing DATA line '{line}': {e}")
+                    #print(f"❌ Error processing DATA line '{line}': {e}")
 
             else:
                 # Any other message from Arduino (debug, motor feedback, etc.)
-                print(f"💬 Arduino Message: {line}")
+                #print(f"💬 Arduino Message: {line}")
 
     # Main async loop: call blocking reader in a thread repeatedly
     while True:
@@ -211,13 +211,13 @@ async def main():
 
     # Start the concurrent sensor reading task
     asyncio.create_task(sensor_reader_task())
-    print("🚀 Sensor reading task scheduled.")
+    #print("🚀 Sensor reading task scheduled.")
 
     # Get token from backend
     resp = requests.get(TOKEN_URL)
     data = resp.json()
     TOKEN = data["token"]
-    print("Got token:", TOKEN[:40], "...")
+    #print("Got token:", TOKEN[:40], "...")
 
     room = rtc.Room()
 
@@ -248,12 +248,12 @@ async def main():
             if cmd == "set_speed":
                 speed = int(payload.get("value", 50))
                 serial_msg = f"SPEED {speed}"
-                print("📩 Speed:", serial_msg)
+                #print("📩 Speed:", serial_msg)
                 send_cmd(serial_msg)
                 return
 
             # --- Simple fallback digital commands ---
-            print("📩 Received:", cmd)
+            #print("📩 Received:", cmd)
             if cmd == "forward":
                 send_cmd("DIR 1.000 0.000")
             elif cmd == "back":
@@ -278,7 +278,7 @@ async def main():
     track = rtc.LocalVideoTrack.create_video_track("pi-camera", camera)
     await room.local_participant.publish_track(track)
 
-    print("📷 Video stream started")
+    #print("📷 Video stream started")
 
     # The main task runs the camera stream indefinitely
     await camera.run()

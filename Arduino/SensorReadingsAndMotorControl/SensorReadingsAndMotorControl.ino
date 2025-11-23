@@ -302,14 +302,15 @@ void loop() {
         // DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Pitch=12.34,Roll=-3.21,Tilt=15.67,Orient=Upright
 
 
-        Serial.print("DATA:");
-        Serial.print("T1="); Serial.print(tempC1, 2);
-        Serial.print(",T2="); Serial.print(tempC2, 2);
-        Serial.print(",TDS="); Serial.print(tdsValue, 0);
-        Serial.print(",pH=");  Serial.print(pH, 2);
-        Serial.print(",Orient="); Serial.println(orientation);
-        Serial.print(",Pitch="); Serial.println(pitch);
-        Serial.print(",Roll="); Serial.println(roll);
+        // Serial.print("DATA:");
+        // Serial.print("T1="); Serial.print(tempC1, 2);
+        // Serial.print(",T2="); Serial.print(tempC2, 2);
+        // Serial.print(",TDS="); Serial.print(tdsValue, 0);
+        // Serial.print(",pH=");  Serial.print(pH, 2);
+        // Serial.print(",Orient="); Serial.println(orientation);
+        // Serial.print(",Pitch="); Serial.println(pitch);
+        // Serial.print(",Roll="); Serial.println(roll);
+        
 
 
 
