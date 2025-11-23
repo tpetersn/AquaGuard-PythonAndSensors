@@ -101,6 +101,10 @@ class CameraStream(rtc.VideoSource):
 # === SENSOR READER TASK (runs concurrently) ===
 # =================================================================
 
+# =================================================================
+# === SENSOR READER TASK (runs concurrently) ===
+# =================================================================
+
 async def sensor_reader_task():
     """
     Reads sensor data from the Arduino serial port, parses it, and posts it.
@@ -113,27 +117,47 @@ async def sensor_reader_task():
 
     print("📡 Sensor reader task started. Awaiting data...")
 
-    # We use asyncio.to_thread to run the blocking serial read in a separate thread.
-    async def read_and_process():
-        # Check if any data is available (non-blocking check)
+    # Blocking function that will be run in a separate thread
+    def read_and_process():
         if arduino.in_waiting > 0:
-            # Blocking read (runs in a separate thread via to_thread)
-            line = arduino.readline().decode('utf-8').strip()
+            try:
+                line = arduino.readline().decode("utf-8", errors="ignore").strip()
+            except Exception as e:
+                print(f"❌ Error reading from Arduino: {e}")
+                return
 
-            # --- 1. Attempt to match the structured sensor data line ---
-            match = DATA_PATTERN.search(line)
-            
-            if match:
+            if not line:
+                return
+
+            # Debug: show the raw line exactly as received
+            print("🔎 Raw line from Arduino:", repr(line))
+
+            # Only parse lines that start with "DATA:"
+            if line.startswith("DATA:"):
                 try:
-                    # Extract values from the regex groups
-                    tempC1_str, tempC2_str, tds_str, ph_str, accelZ_str, orientation = match.groups()
+                    # Remove the "DATA:" prefix
+                    payload = line.split("DATA:", 1)[1]
 
-                    # Convert to required types, using T1 (water temp) for the main 'temperature' field
-                    temperature = float(tempC1_str) if tempC1_str != "ERR" else None
-                    tds = int(tds_str)
+                    # Example payload:
+                    # "T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Orient=Upright"
+                    parts = payload.split(",")
+
+                    data = {}
+                    for part in parts:
+                        if "=" in part:
+                            key, val = part.split("=", 1)
+                            data[key.strip()] = val.strip()
+
+                    # Extract values with sane defaults
+                    t1_str = data.get("T1", "ERR")
+                    tds_str = data.get("TDS", "0")
+                    ph_str  = data.get("pH", "7.0")
+                    orientation = data.get("Orient", "Unknown")
+
+                    temperature = float(t1_str) if t1_str != "ERR" else None
+                    tds = float(tds_str)
                     ph = float(ph_str)
-                    # accelZ = float(accelZ_str) # Not posted, but useful for debugging
-                    
+
                     print("-" * 25)
                     print(f"🌡️ T1={temperature}°C | pH={ph} | TDS={tds}")
                     print(f"📐 Orientation: {orientation}")
@@ -148,22 +172,25 @@ async def sensor_reader_task():
                         battery_voltage=BATTERY_VOLTAGE,
                         battery_percentage=BATTERY_PERCENTAGE
                     )
-                    print("✅ Reading sent successfully:", response.status_code if hasattr(response, 'status_code') else "OK")
+
+                    print(
+                        "✅ Reading sent successfully:",
+                        getattr(response, "status_code", "OK")
+                    )
                     print("-" * 25)
 
                 except Exception as e:
                     print(f"❌ Error processing DATA line '{line}': {e}")
-            
-            # --- 2. Catch other serial output (motor feedback, test messages) ---
-            elif line:
-                # Print anything else the Arduino sends (like motor feedback)
+
+            else:
+                # Any other message from Arduino (debug, motor feedback, etc.)
                 print(f"💬 Arduino Message: {line}")
-        
+
+    # Main async loop: call blocking reader in a thread repeatedly
     while True:
-        # Schedule the serial read operation to run in a separate thread pool
-        # This keeps the main asyncio event loop free to handle LiveKit events.
         await asyncio.to_thread(read_and_process)
-        await asyncio.sleep(0.1) # Check serial input frequently
+        await asyncio.sleep(0.1)  # Check serial input frequently
+
 
 
 # =================================================================
