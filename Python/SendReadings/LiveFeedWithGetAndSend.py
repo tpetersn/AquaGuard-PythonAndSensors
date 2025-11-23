@@ -176,7 +176,9 @@ async def sensor_reader_task():
                         chlorine=CHLORINE,
                         tds=tds,
                         battery_voltage=BATTERY_VOLTAGE,
-                        battery_percentage=BATTERY_PERCENTAGE
+                        battery_percentage=BATTERY_PERCENTAGE,
+                        pitch=pitch,
+                        roll=roll
                     )
 
                     print(
