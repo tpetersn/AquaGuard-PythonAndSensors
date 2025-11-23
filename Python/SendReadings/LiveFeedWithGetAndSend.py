@@ -34,7 +34,7 @@ BATTERY_PERCENTAGE = 85
 # Regex to capture all structured data fields from the Arduino output
 # Format: DATA:T1=25.50,T2=22.30,TDS=350,pH=7.21,AccelZ=-9.81,Orient=Upright
 DATA_PATTERN = re.compile(
-    r"DATA:T1=([\d.-]+|ERR),T2=([\d.-]+|ERR),TDS=(\d+),pH=([\d.]+),AccelZ=([\d.-]+),Orient=([a-zA-Z\s]+,Pitch=([\d.-]+),Roll=([\d.-]+))"
+    r"DATA:T1=([\d.-]+|ERR),T2=([\d.-]+|ERR),TDS=(\d+),pH=([\d.]+),AccelZ=([\d.-]+),Orient=([a-zA-Z\s]+,pitch=([\d.-]+),roll=([\d.-]+))"
 )
 
 # =================================================================
