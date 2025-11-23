@@ -19,8 +19,8 @@ TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=p
 
 # --- Arduino Serial Config ---
 # Ensure this port matches your connected Arduino/Nano
-# ARDUINO_PORT = "/dev/ttyACM0"  # Linux/Raspberry Pi (Default from sensor script)
-ARDUINO_PORT = "COM3"           # Windows (Default from LiveKit script)
+ARDUINO_PORT = "/dev/ttyUSB0"  # Linux/Raspberry Pi (Default from sensor script)
+# ARDUINO_PORT = "COM3"           # Windows (Default from LiveKit script)
 BAUD = 9600                     # Must match Arduino's Serial.begin(9600)
 
 # --- External Service Config ---
