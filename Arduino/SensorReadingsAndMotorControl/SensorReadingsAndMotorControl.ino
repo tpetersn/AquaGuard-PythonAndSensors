@@ -11,8 +11,8 @@
 // ===================================
 const int RPWM = 5;      // PWM forward
 const int LPWM = 6;      // PWM reverse
-const int R_EN = 7;
-const int L_EN = 8;
+const int R_EN = 4;
+const int L_EN = 7;
 const int SERVO_PIN = 9;
 
 int maxPWM = 180;        // Default speed (0–255)
