@@ -5,7 +5,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
-#include<Math.h>
+#include <math.h>
 
 // ===================================
 // === MOTOR & SERVO DEFINITIONS ===
