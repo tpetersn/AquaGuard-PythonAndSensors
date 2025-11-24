@@ -56,9 +56,9 @@ Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 // ===================================
 // === pH Sensor Variables ===
 // ===================================
-const float PH_SLOPE     = -4.4615;   // m
-const float PH_INTERCEPT = 13.2077;   // b
-const float PH_OFFSET    = -0.7;      // extra offset
+const float PH_SLOPE     = -4.3333;
+const float PH_INTERCEPT = 20.65;
+const float PH_OFFSET    = -0.40;      // extra offset
 int   phRaw;
 float phVoltage;
 float pH = 0.0;
@@ -206,11 +206,15 @@ void setup() {
   */
 }
 
+
+
 // =================================================================
 // ♾️ LOOP
 // =================================================================
 void loop() {
   unsigned long now = millis();
+
+  
 
   // ---- Non-blocking DS18B20 handling ----
   if (now - lastTempConvStart >= TEMP_CONV_TIME_MS) {
