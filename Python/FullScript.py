@@ -1,34 +1,49 @@
 import asyncio
+import cv2
 import json
 import requests
+import serial
+import time
 import pigpio
 from livekit import rtc
 
-# =====================================================
-# CONFIG
-# =====================================================
+from SendReadings import post_reading
+
+# =================================================================
+# === CONFIGURATION CONSTANTS ===
+# =================================================================
 
 ROOM_URL = "wss://pbrobot-ir91vwzj.livekit.cloud"
 TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=pool"
 
-# LEFT motor
+# --- Arduino (SENSORS ONLY) ---
+ARDUINO_PORT = "/dev/ttyUSB0"
+BAUD = 9600
+
+# --- Device metadata ---
+DEVICE_ID = "68cc90c7ef0763dddf1a5e9d"
+CHLORINE = 1.1
+BATTERY_VOLTAGE = 3.7
+BATTERY_PERCENTAGE = 85
+
+# --- Motor GPIO (BCM) ---
 L_FWD = 18
 L_REV = 19
-
-# RIGHT motor
 R_FWD = 12
 R_REV = 13
 
 MAX_PWM = 180
 DEADZONE = 0.02
 
-# =====================================================
-# GPIO INIT
-# =====================================================
+arduino = None
+
+# =================================================================
+# === GPIO / MOTOR SETUP ===
+# =================================================================
 
 pi = pigpio.pi()
 if not pi.connected:
-    raise RuntimeError("pigpio daemon not running")
+    raise RuntimeError("❌ pigpio daemon not running")
 
 for pin in [L_FWD, L_REV, R_FWD, R_REV]:
     pi.set_mode(pin, pigpio.OUTPUT)
@@ -39,28 +54,20 @@ def stop_all():
     for pin in [L_FWD, L_REV, R_FWD, R_REV]:
         pi.set_PWM_dutycycle(pin, 0)
 
-stop_all()
-
-# =====================================================
-# MOTOR HELPERS
-# =====================================================
-
 def clamp(val, lo=-1.0, hi=1.0):
     return max(lo, min(hi, val))
 
-def set_motor(fwd_pin, rev_pin, value):
-    """value: -1.0 .. +1.0"""
+def set_motor(fwd, rev, value):
     pwm = int(abs(value) * MAX_PWM)
-
     if value > 0:
-        pi.set_PWM_dutycycle(rev_pin, 0)
-        pi.set_PWM_dutycycle(fwd_pin, pwm)
+        pi.set_PWM_dutycycle(rev, 0)
+        pi.set_PWM_dutycycle(fwd, pwm)
     elif value < 0:
-        pi.set_PWM_dutycycle(fwd_pin, 0)
-        pi.set_PWM_dutycycle(rev_pin, pwm)
+        pi.set_PWM_dutycycle(fwd, 0)
+        pi.set_PWM_dutycycle(rev, pwm)
     else:
-        pi.set_PWM_dutycycle(fwd_pin, 0)
-        pi.set_PWM_dutycycle(rev_pin, 0)
+        pi.set_PWM_dutycycle(fwd, 0)
+        pi.set_PWM_dutycycle(rev, 0)
 
 def drive_diff(throttle, turn):
     if abs(throttle) < DEADZONE:
@@ -68,28 +75,131 @@ def drive_diff(throttle, turn):
     if abs(turn) < DEADZONE:
         turn = 0.0
 
-    left  = clamp(throttle + turn)
+    left = clamp(throttle + turn)
     right = clamp(throttle - turn)
 
     set_motor(L_FWD, L_REV, left)
     set_motor(R_FWD, R_REV, right)
 
-# =====================================================
-# LIVEKIT
-# =====================================================
+stop_all()
+
+# =================================================================
+# === ARDUINO SERIAL (SENSORS ONLY)
+# =================================================================
+
+def init_arduino():
+    global arduino
+    try:
+        if arduino and arduino.is_open:
+            return
+        arduino = serial.Serial(ARDUINO_PORT, BAUD, timeout=1.0)
+        time.sleep(2)
+        arduino.reset_input_buffer()
+        print("🔌 Arduino connected (sensors only)")
+    except Exception as e:
+        print("❌ Arduino connection failed:", e)
+        arduino = None
+
+# =================================================================
+# === CAMERA STREAMER
+# =================================================================
+
+class CameraStream(rtc.VideoSource):
+    def __init__(self, width=640, height=480):
+        super().__init__(width, height)
+        self.cap = cv2.VideoCapture(0)
+        self.width = width
+        self.height = height
+
+    async def run(self):
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                await asyncio.sleep(0.1)
+                continue
+
+            frame = cv2.resize(frame, (self.width, self.height))
+            yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV_I420)
+
+            video_frame = rtc.VideoFrame(
+                width=self.width,
+                height=self.height,
+                data=yuv.tobytes(),
+                type=rtc.VideoBufferType.I420,
+            )
+            self.capture_frame(video_frame)
+            await asyncio.sleep(0.03)
+
+# =================================================================
+# === SENSOR READER TASK
+# =================================================================
+
+async def sensor_reader_task():
+    global arduino
+    print("📡 Sensor reader started")
+
+    while True:
+        if arduino is None or not arduino.is_open:
+            init_arduino()
+            await asyncio.sleep(1)
+            continue
+
+        def read_line():
+            try:
+                return arduino.readline().decode("utf-8", errors="ignore").strip()
+            except:
+                return None
+
+        line = await asyncio.to_thread(read_line)
+        if not line or not line.startswith("DATA:"):
+            await asyncio.sleep(0.05)
+            continue
+
+        try:
+            payload = line.split("DATA:", 1)[1]
+            data = dict(p.split("=", 1) for p in payload.split(",") if "=" in p)
+
+            temperature = float(data.get("T1", "nan"))
+            ph = float(data.get("pH", "7.0"))
+            tds = float(data.get("TDS", "0"))
+            pitch = float(data.get("Pitch", "nan"))
+            roll = float(data.get("Roll", "nan"))
+
+            print(
+                f"🌡 {temperature}°C  pH={ph:.2f}  TDS={tds:.0f}  "
+                f"Pitch={pitch}° Roll={roll}°"
+            )
+
+            post_reading(
+                DEVICE_ID,
+                temperature=temperature,
+                ph=ph,
+                chlorine=CHLORINE,
+                tds=tds,
+                battery_voltage=BATTERY_VOLTAGE,
+                battery_percentage=BATTERY_PERCENTAGE,
+                pitch=pitch,
+                roll=roll,
+            )
+
+        except Exception as e:
+            print("❌ Sensor parse/post error:", e)
+
+        await asyncio.sleep(0.05)
+
+# =================================================================
+# === MAIN ASYNC LOGIC
+# =================================================================
 
 async def main():
+    init_arduino()
+    asyncio.create_task(sensor_reader_task())
+
     token = requests.get(TOKEN_URL).json()["token"]
     room = rtc.Room()
 
-    @room.on("connected")
-    def _():
-        print("✅ Connected")
-
-    @room.on("disconnected")
-    def _():
-        print("❌ Disconnected")
-        stop_all()
+    room.on("connected", lambda: print("✅ Connected to LiveKit"))
+    room.on("disconnected", lambda: (print("❌ Disconnected"), stop_all()))
 
     @room.on("data_received")
     def on_data(packet):
@@ -98,8 +208,8 @@ async def main():
             cmd = payload.get("cmd")
 
             if cmd == "set_direction":
-                y = float(payload.get("y", 0.0))  # throttle
-                x = float(payload.get("x", 0.0))  # turn
+                y = float(payload.get("y", 0.0))
+                x = float(payload.get("x", 0.0))
                 drive_diff(y, x)
 
             elif cmd == "set_speed":
@@ -107,23 +217,25 @@ async def main():
                 val = int(payload.get("value", 50))
                 MAX_PWM = int(val / 100 * 255)
 
+            
+            else:
+                print("⚠️ Unknown command:", cmd)
+
         except Exception as e:
-            print("Command error:", e)
+            print("❌ LiveKit command error:", e)
 
     await room.connect(ROOM_URL, token)
 
-    # Camera
     camera = CameraStream(640, 480)
     track = rtc.LocalVideoTrack.create_video_track("pi-camera", camera)
     await room.local_participant.publish_track(track)
 
     print("📷 Video stream started")
-    while True:
-        await asyncio.sleep(1)
+    await camera.run()
 
-# =====================================================
-# ENTRY
-# =====================================================
+# =================================================================
+# === ENTRY
+# =================================================================
 
 if __name__ == "__main__":
     try:
