@@ -32,7 +32,7 @@ L_REV = 19
 R_FWD = 12
 R_REV = 13
 
-MAX_PWM = 180
+MAX_PWM = 90
 DEADZONE = 0.02
 
 arduino = None
