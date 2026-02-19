@@ -216,6 +216,9 @@ async def main():
                 global MAX_PWM
                 val = int(payload.get("value", 50))
                 MAX_PWM = int(val / 100 * 255)
+                
+            elif cmd == "stop":
+                drive_diff(0, 0)
 
             
             else:
