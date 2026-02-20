@@ -137,27 +137,26 @@ class CameraStream(rtc.VideoSource):
 async def sensor_reader_task():
     global arduino
 
-    print("📡 Sensor reader started")
+    print("📡 Sensor reader + console mirror started")
 
     while True:
 
-        # ---------- Ensure Arduino connection ----------
+        # Ensure Arduino connection
         if arduino is None or not arduino.is_open:
             print("🔄 Arduino not connected — attempting reconnect...")
             init_arduino()
             await asyncio.sleep(1)
             continue
 
-        # ---------- Read one line ----------
+        # Blocking serial read in thread
         def read_line():
             try:
                 raw = arduino.readline()
                 if not raw:
                     return None
-                decoded = raw.decode("utf-8", errors="ignore").strip()
-                return decoded
+                return raw.decode("utf-8", errors="ignore").strip()
             except Exception as e:
-                print("❌ Serial read exception:", repr(e))
+                print("❌ Serial read error:", repr(e))
                 return None
 
         line = await asyncio.to_thread(read_line)
@@ -166,15 +165,18 @@ async def sensor_reader_task():
             await asyncio.sleep(0.05)
             continue
 
-        print(f"🧾 RAW SERIAL: {line}")
+        # ==============================
+        # 🖥️ MIRROR ARDUINO CONSOLE
+        # ==============================
+        print(f"🟢 Arduino: {line}")
 
-        # ---------- Only process DATA lines ----------
+        # ==============================
+        # 📊 PROCESS ONLY DATA LINES
+        # ==============================
         if not line.startswith("DATA:"):
-            print("💬 Non-DATA line ignored")
             continue
 
         try:
-            # ---------- Parse ----------
             payload = line.split("DATA:", 1)[1]
             parts = payload.split(",")
 
@@ -184,8 +186,6 @@ async def sensor_reader_task():
                     k, v = part.split("=", 1)
                     data[k.strip()] = v.strip()
 
-            print("🔍 Parsed fields:", data)
-
             temperature = float(data.get("T1")) if data.get("T1") else None
             ph = float(data.get("pH")) if data.get("pH") else None
             tds = float(data.get("TDS")) if data.get("TDS") else None
@@ -193,11 +193,10 @@ async def sensor_reader_task():
             roll = float(data.get("Roll")) if data.get("Roll") else None
 
             print(
-                f"📊 VALUES → Temp={temperature} pH={ph} TDS={tds} "
-                f"Pitch={pitch} Roll={roll}"
+                f"📊 Parsed → Temp={temperature}°C pH={ph} "
+                f"TDS={tds} Pitch={pitch} Roll={roll}"
             )
 
-            # ---------- Post to backend ----------
             print("🌐 Posting to database...")
 
             response = post_reading(
@@ -212,25 +211,20 @@ async def sensor_reader_task():
                 roll=roll,
             )
 
-            # ---------- Response debug ----------
             if response is None:
-                print("⚠️ post_reading() returned None")
-
+                print("⚠️ post_reading returned None")
             else:
-                print("✅ POST SENT")
-                print("   Status:", getattr(response, "status_code", "NO STATUS"))
-
+                print("✅ POST status:", getattr(response, "status_code", "NO STATUS"))
                 try:
-                    print("   Response body:", response.text[:300])
+                    print("📨 Response:", response.text[:200])
                 except:
-                    print("   (No readable response body)")
+                    pass
 
         except Exception as e:
-            print("❌ PROCESSING ERROR:")
-            print("   Line:", line)
-            print("   Error:", repr(e))
+            print("❌ DATA processing error:", repr(e))
 
         await asyncio.sleep(0.05)
+
 
 
 # =================================================================
