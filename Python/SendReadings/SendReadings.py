@@ -43,7 +43,7 @@ def _get_valid_token():
     return _token
 
 
-def post_reading(device_id, temperature=None, ph=None, chlorine=None,
+def post_reading(device_id, temperature=None, outtemp=None, ph=None, chlorine=None,
                  tds=None, battery_voltage=None, battery_percentage=None, pitch=None, roll=None):
     """
     Post a sensor reading to the backend.
@@ -56,6 +56,7 @@ def post_reading(device_id, temperature=None, ph=None, chlorine=None,
     payload = {
         "deviceId": device_id,
         "temperature": temperature,
+	"outtemp": 
         "pH": ph,
         "chlorine": chlorine,
         "tds": tds,
