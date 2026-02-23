@@ -187,7 +187,7 @@ async def sensor_reader_task():
                     data[k.strip()] = v.strip()
 
             temperature = float(data.get("T1")) if data.get("T1") else None
-	    outtemp = float(data.get("T2")) if data.get("T2") else None
+            outtemp = float(data.get("T2")) if data.get("T2") else None
             ph = float(data.get("pH")) if data.get("pH") else None
             tds = float(data.get("TDS")) if data.get("TDS") else None
             pitch = float(data.get("Pitch")) if data.get("Pitch") else None
@@ -203,6 +203,7 @@ async def sensor_reader_task():
             response = post_reading(
                 DEVICE_ID,
                 temperature=temperature,
+                outtemp=outtemp,
                 ph=ph,
                 chlorine=CHLORINE,
                 tds=tds,
