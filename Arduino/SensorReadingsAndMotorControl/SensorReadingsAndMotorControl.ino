@@ -61,7 +61,7 @@ int   phSampleCount    = 0;
 // === TIMING CONSTANTS ===
 const unsigned long TDS_SAMPLE_INTERVAL_MS   = 40UL;    
 const unsigned long PH_SAMPLE_INTERVAL_MS    = 20UL;    
-const unsigned long REPORT_INTERVAL_MS       = 5000UL;  
+const unsigned long REPORT_INTERVAL_MS       = 1000UL;  
 const unsigned long TEMP_CONV_TIME_MS        = 750UL;  
 
 // Timing trackers

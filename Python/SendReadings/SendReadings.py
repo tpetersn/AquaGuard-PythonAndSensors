@@ -56,7 +56,7 @@ def post_reading(device_id, temperature=None, outtemp=None, ph=None, chlorine=No
     payload = {
         "deviceId": device_id,
         "temperature": temperature,
-	    "outtemp": outtemp,
+	"outtemp": 
         "pH": ph,
         "chlorine": chlorine,
         "tds": tds,
