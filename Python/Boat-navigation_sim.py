@@ -3,15 +3,45 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random
 import math
+import threading
+import serial
 
 # --- parameters ---
 POOL_WIDTH = 1000   
 POOL_HEIGHT = 500   
 BOAT_SPEED = 20     
 TURN_SPEED = 10     
-SENSOR_MAX_DIST = 200 
+SENSOR_MAX_DIST = 200
 COLLISION_DIST = 60  #   threshold distance to decide front sonar collision
 DEAD_CORNER_DIST = 50 # threshold distance to decide dead corner on left and right sides sonars
+
+# --- real sonar (JSNR04T-2.0 on COM4) ---
+SERIAL_PORT = "COM4"
+BAUD_RATE   = 9600
+
+_real_front_dist = SENSOR_MAX_DIST  # latest reading from hardware, in cm
+_serial_lock     = threading.Lock()
+_sonar_connected = False
+
+def _serial_reader():
+    global _real_front_dist, _sonar_connected
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        _sonar_connected = True
+        print(f"[sonar] connected on {SERIAL_PORT}")
+        while True:
+            line = ser.readline().decode("utf-8", errors="replace").strip()
+            if line.startswith("SONAR:"):
+                try:
+                    dist = float(line[6:])
+                    with _serial_lock:
+                        _real_front_dist = min(dist, SENSOR_MAX_DIST)
+                except ValueError:
+                    pass
+    except Exception as e:
+        print(f"[sonar] not available ({e}) — front sensor will use raycast")
+
+threading.Thread(target=_serial_reader, daemon=True).start()
 
 class State:
     CRUISE = "CRUISE"
@@ -53,8 +83,13 @@ class AquaguardSim:
 
     def update(self):
         # 1. update sensors
-        self.sensors['front'] = self.raycast(0)
-        self.sensors['left'] = self.raycast(90)
+        # front: real JSNR04T-2.0 reading if connected, else simulated raycast
+        if _sonar_connected:
+            with _serial_lock:
+                self.sensors['front'] = _real_front_dist
+        else:
+            self.sensors['front'] = self.raycast(0)
+        self.sensors['left']  = self.raycast(90)
         self.sensors['right'] = self.raycast(-90)
         
         # 2. finite state machine
@@ -182,12 +217,13 @@ def animate(frame):
     rx_lim, ry_lim = get_ray_coords(DEAD_CORNER_DIST, -90)
     limit_right.set_data(rx_lim, ry_lim)
     
+    front_src = "REAL" if _sonar_connected else "SIM"
     status_msg = (
-        f"State: {sim.state}\n" #display current state
-        f"Type: {sim.collision_type}\n" # display collision type
-        f"Front: {int(sim.sensors['front'])}" #display front sonar distance
-        f" | Left: {int(sim.sensors['left'])}" #display left sonar distance
-        f" | Right: {int(sim.sensors['right'])}" #display right sonar distance
+        f"State: {sim.state}\n"
+        f"Type: {sim.collision_type}\n"
+        f"Front [{front_src}]: {int(sim.sensors['front'])} cm"
+        f" | Left: {int(sim.sensors['left'])}"
+        f" | Right: {int(sim.sensors['right'])}"
     )
     status_text.set_text(status_msg)
     return boat_dot, boat_dir, ray_front, ray_left, ray_right, limit_left, limit_right, status_text
