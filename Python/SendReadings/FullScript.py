@@ -17,7 +17,7 @@ ROOM_URL = "wss://pbrobot-ir91vwzj.livekit.cloud"
 TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=pool"
 
 # --- Arduino (SENSORS ONLY) ---
-ARDUINO_PORT = "/dev/ttyUSB0"
+ARDUINO_PORT = "/dev/ttyUSB1"
 BAUD = 9600
 
 # --- Device metadata ---
