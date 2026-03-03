@@ -15,7 +15,7 @@ SENSOR_MAX_DIST = 195   # cm — cap slightly inside pool
 COLLISION_DIST  = 30    # cm — reverse when object closer than this
 
 # --- real sonar (JSNR04T-2.0, Trig=D7, Echo=D6) ---
-SERIAL_PORT = "COM4"
+SERIAL_PORT = "COM6"
 BAUD_RATE   = 9600
 
 _real_front_dist = SENSOR_MAX_DIST
