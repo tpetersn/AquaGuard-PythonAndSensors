@@ -255,7 +255,7 @@ async def sensor_reader_task():
         except Exception as e:
             print("❌ Parsing error:", repr(e))
 
-                await asyncio.sleep(0.05)
+            await asyncio.sleep(0.05)
 
 # =================================================================
 # === AI LOGIC
