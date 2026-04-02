@@ -6,18 +6,8 @@ import serial
 import time
 import pigpio
 from livekit import rtc
-import imagezmq
-import numpy as np
 
 from SendReadings import post_reading
-f_dist = 200.0
-l_dist = 200.0
-r_dist = 200.0
-
-AI_ENABLED = True
-
-current_state = "CRUISE"
-state_end_time = 0.0
 
 # =================================================================
 # === CONFIGURATION CONSTANTS ===
@@ -146,11 +136,11 @@ class CameraStream(rtc.VideoSource):
 
 async def sensor_reader_task():
     global arduino
-    global f_dist, l_dist, r_dist
+
     print("📡 Sensor reader + console mirror started")
 
     while True:
-        
+
         # Ensure Arduino connection
         if arduino is None or not arduino.is_open:
             print("🔄 Arduino not connected — attempting reconnect...")
@@ -179,24 +169,6 @@ async def sensor_reader_task():
         # 🖥️ MIRROR ARDUINO CONSOLE
         # ==============================
         print(f"🟢 Arduino: {line}")
-        # ==============================
-        # 🔵 SONAR PARSING (NEW)
-        # ==============================
-        if line.startswith("SONAR:"):
-            try:
-                parts = line.split(":")[1].split(",")
-
-                if len(parts) == 3:
-                    f_dist = float(parts[0])
-                    l_dist = float(parts[1])
-                    r_dist = float(parts[2])
-
-                    print(f"📏 Sonar → F={f_dist} L={l_dist} R={r_dist}")
-
-            except Exception as e:
-                print("❌ SONAR parse error:", e)
-
-            continue  # skip to next loop
 
         # ==============================
         # 📊 PROCESS ONLY DATA LINES
@@ -255,66 +227,7 @@ async def sensor_reader_task():
 
         await asyncio.sleep(0.05)
 
-# =================================================================
-# === AI LOGIC
-# =================================================================
-async def ai_navigation_task():
-    global f_dist, l_dist, r_dist
-    global current_state, state_end_time
 
-    print("🤖 AI navigation started (LOCAL)")
-
-    while True:
-        if not AI_ENABLED:
-            await asyncio.sleep(0.1)
-            continue
-
-        now = time.time()
-
-        # =========================
-        # STATE MACHINE
-        # =========================
-        if current_state == "CRUISE":
-            if f_dist < 50.0:
-                current_state = "REVERSE"
-                state_end_time = now + 2.0
-                print(f"🚨 Front blocked: {f_dist}cm")
-
-        elif current_state == "REVERSE":
-            if now >= state_end_time:
-                if l_dist < r_dist:
-                    current_state = "TURN_RIGHT"
-                    print("👉 Turning RIGHT")
-                else:
-                    current_state = "TURN_LEFT"
-                    print("👈 Turning LEFT")
-                state_end_time = now + 2.0
-
-        elif current_state in ["TURN_RIGHT", "TURN_LEFT"]:
-            if now >= state_end_time:
-                current_state = "CRUISE"
-                print("✅ Back to CRUISE")
-
-        # =========================
-        # MOTOR COMMANDS
-        # =========================
-        if current_state == "CRUISE":
-            throttle, turn = 0.4, 0.0
-
-        elif current_state == "REVERSE":
-            throttle, turn = -0.4, 0.0
-
-        elif current_state == "TURN_RIGHT":
-            throttle, turn = 0.0, 0.6
-
-        elif current_state == "TURN_LEFT":
-            throttle, turn = 0.0, -0.6
-
-        drive_diff(throttle, turn)
-
-        print(f"🤖 {current_state} | F={f_dist} L={l_dist} R={r_dist}")
-
-        await asyncio.sleep(0.05)
 
 # =================================================================
 # === MAIN ASYNC LOGIC
@@ -323,7 +236,6 @@ async def ai_navigation_task():
 async def main():
     init_arduino()
     asyncio.create_task(sensor_reader_task())
-    asyncio.create_task(ai_navigation_task())
 
     token = requests.get(TOKEN_URL).json()["token"]
     room = rtc.Room()
@@ -338,9 +250,6 @@ async def main():
             cmd = payload.get("cmd")
 
             if cmd == "set_direction":
-                if AI_ENABLED:
-                    return  # AI has control
-
                 y = float(payload.get("y", 0.0))
                 x = float(payload.get("x", 0.0))
                 drive_diff(y, x)

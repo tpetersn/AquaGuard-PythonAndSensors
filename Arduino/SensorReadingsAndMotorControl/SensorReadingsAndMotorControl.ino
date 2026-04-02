@@ -6,6 +6,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 #include <math.h>
+#include <SoftwareSerial.h>
 
 
 
@@ -20,6 +21,14 @@ Servo rudder;
 #define TEMP_SENSOR_2 3   // DS18B20 2 (Air Temp)
 #define PH_SENSOR     A0  // Analog pH sensor
 #define TDS_SENSOR    A1  // Analog TDS sensor
+const int TRIG_LEFT = 7;
+const int ECHO_LEFT = 6;
+
+const int TRIG_RIGHT = 5;
+const int ECHO_RIGHT = 4;
+
+const int TRIG_FRONT = 9;
+const int ECHO_FRONT = 8;
 
 // ===================================
 // === SHARED SENSOR VARIABLES ===
@@ -101,13 +110,14 @@ int getMedianNum(int bArray[], int iFilterLen) {
 
 
 
+
+
 // =================================================================
 // 🚀 SETUP
 // =================================================================
 void setup() {
   Serial.begin(9600);
-
-
+  
 
 
 
@@ -145,6 +155,41 @@ void setup() {
 
   Serial.print("Temp2 devices: ");
   Serial.println(TempSensor2.getDeviceCount());
+
+  pinMode(TRIG_FRONT, OUTPUT); pinMode(ECHO_FRONT, INPUT);
+  pinMode(TRIG_LEFT, OUTPUT);  pinMode(ECHO_LEFT, INPUT);
+  pinMode(TRIG_RIGHT, OUTPUT); pinMode(ECHO_RIGHT, INPUT);
+  
+  // Ensure all triggers start LOW
+  digitalWrite(TRIG_FRONT, LOW);
+  digitalWrite(TRIG_LEFT, LOW);
+  digitalWrite(TRIG_RIGHT, LOW);
+  
+  // 1s stabilization time for JSNR04T waterproof sensors
+  delay(1000); 
+  Serial.println("System Ready. Sequential Firing Initiated.");
+}
+
+float readSonar(int trigPin, int echoPin) {
+  // Send a 20us HIGH pulse to trigger the sensor
+  // (JSNR04T prefers 20us over the standard 10us for stability)
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(20);
+  digitalWrite(trigPin, LOW);
+
+  // pulseIn blocks until echo is received. 
+  // 60000us (60ms) timeout prevents the Arduino from freezing if facing open water
+  long duration = pulseIn(echoPin, HIGH, 60000);
+  
+  if (duration == 0) {
+    // If timeout occurs (no echo returned), return a default safe distance of 200.0 cm
+    return 200.0; 
+  }
+  
+  // Convert duration to centimeters (Speed of sound is 343m/s)
+  return (duration * 0.0343) / 2.0;
 }
 
 // =================================================================
@@ -152,6 +197,30 @@ void setup() {
 // =================================================================
 void loop() {
   unsigned long now = millis();
+
+  // ---- Sonar reading ----
+
+
+  float dist_front = readSonar(TRIG_FRONT, ECHO_FRONT);
+  delay(60); // Strict 60ms delay to prevent acoustic crosstalk from bouncing waves
+
+  // 2. Fire LEFT
+  float dist_left = readSonar(TRIG_LEFT, ECHO_LEFT);
+  delay(60); // Strict 60ms delay
+
+  // 3. Fire RIGHT
+  float dist_right = readSonar(TRIG_RIGHT, ECHO_RIGHT);
+  delay(60); // Strict 60ms delay
+
+  // 4. Pack the three readings into a single line for the Raspberry Pi
+  // Format expected by Pi: SONAR:front,left,right
+  Serial.print("SONAR:");
+  Serial.print(dist_front, 1); // Print with 1 decimal place
+  Serial.print(",");
+  Serial.print(dist_left, 1);
+  Serial.print(",");
+  Serial.println(dist_right, 1); // Use println for the last value to add a newline
+
   if (now - lastTempConvStart >= TEMP_CONV_TIME_MS) {
       float request1 = TempSensor1.getTempCByIndex(0);
       float request2 = TempSensor2.getTempCByIndex(0);
