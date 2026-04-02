@@ -70,7 +70,7 @@ int   phSampleCount    = 0;
 // === TIMING CONSTANTS ===
 const unsigned long TDS_SAMPLE_INTERVAL_MS   = 40UL;    
 const unsigned long PH_SAMPLE_INTERVAL_MS    = 20UL;    
-const unsigned long REPORT_INTERVAL_MS       = 5000UL;  
+const unsigned long REPORT_INTERVAL_MS       = 200UL;  
 const unsigned long TEMP_CONV_TIME_MS        = 750UL;  
 
 // Timing trackers
@@ -199,27 +199,12 @@ void loop() {
   unsigned long now = millis();
 
   // ---- Sonar reading ----
-
-
+  // --- SONAR ---
   float dist_front = readSonar(TRIG_FRONT, ECHO_FRONT);
-  delay(60); // Strict 60ms delay to prevent acoustic crosstalk from bouncing waves
-
-  // 2. Fire LEFT
-  float dist_left = readSonar(TRIG_LEFT, ECHO_LEFT);
-  delay(60); // Strict 60ms delay
-
-  // 3. Fire RIGHT
+  float dist_left  = readSonar(TRIG_LEFT, ECHO_LEFT);
   float dist_right = readSonar(TRIG_RIGHT, ECHO_RIGHT);
-  delay(60); // Strict 60ms delay
 
-  // 4. Pack the three readings into a single line for the Raspberry Pi
-  // Format expected by Pi: SONAR:front,left,right
-  Serial.print("SONAR:");
-  Serial.print(dist_front, 1); // Print with 1 decimal place
-  Serial.print(",");
-  Serial.print(dist_left, 1);
-  Serial.print(",");
-  Serial.println(dist_right, 1); // Use println for the last value to add a newline
+  
 
   if (now - lastTempConvStart >= TEMP_CONV_TIME_MS) {
       float request1 = TempSensor1.getTempCByIndex(0);
@@ -303,15 +288,20 @@ void loop() {
 
     // Send DATA line
     Serial.print("DATA:");
-    Serial.print("T1=");    Serial.print(tempC1, 2);
-    Serial.print(",T2=");   Serial.print(tempC2, 2);
-    Serial.print(",TDS=");  Serial.print(tdsValue, 0);
-    Serial.print(",pH=");   Serial.print(pH, 2);
-    Serial.print(",Pitch=");Serial.print(pitch, 2);
+    Serial.print("T1="); Serial.print(tempC1, 2);
+    Serial.print(",T2="); Serial.print(tempC2, 2);
+    Serial.print(",TDS="); Serial.print(tdsValue, 0);
+    Serial.print(",pH="); Serial.print(pH, 2);
+    Serial.print(",Pitch="); Serial.print(pitch, 2);
     Serial.print(",Roll="); Serial.print(roll, 2);
     Serial.print(",Orient="); Serial.print(orientation);
-    Serial.println();
+
+    Serial.print("|SONAR:");
+    Serial.print(dist_front, 1);
+    Serial.print(",");
+    Serial.print(dist_left, 1);
+    Serial.print(",");
+    Serial.println(dist_right, 1);
   }
 
-  
 }

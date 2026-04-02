@@ -27,7 +27,7 @@ ROOM_URL = "wss://pbrobot-ir91vwzj.livekit.cloud"
 TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=pool"
 
 # --- Arduino (SENSORS ONLY) ---
-ARDUINO_PORT = "/dev/ttyUSB1"
+ARDUINO_PORT = "/dev/ttyUSB0"
 BAUD = 9600
 
 # --- Device metadata ---
@@ -176,37 +176,27 @@ async def sensor_reader_task():
             continue
 
         # ==============================
-        # 🖥️ MIRROR ARDUINO CONSOLE
+        # 🖥️ RAW OUTPUT (DEBUG)
         # ==============================
         print(f"🟢 Arduino: {line}")
-        # ==============================
-        # 🔵 SONAR PARSING (NEW)
-        # ==============================
-        if line.startswith("SONAR:"):
-            try:
-                parts = line.split(":")[1].split(",")
-
-                if len(parts) == 3:
-                    f_dist = float(parts[0])
-                    l_dist = float(parts[1])
-                    r_dist = float(parts[2])
-
-                    print(f"📏 Sonar → F={f_dist} L={l_dist} R={r_dist}")
-
-            except Exception as e:
-                print("❌ SONAR parse error:", e)
-
-            continue  # skip to next loop
 
         # ==============================
-        # 📊 PROCESS ONLY DATA LINES
+        # SPLIT DATA + SONAR
         # ==============================
-        if not line.startswith("DATA:"):
+        if "|SONAR:" not in line or not line.startswith("DATA:"):
+            print("⚠️ Invalid line format")
             continue
 
         try:
-            payload = line.split("DATA:", 1)[1]
-            parts = payload.split(",")
+            data_part, sonar_part = line.split("|SONAR:")
+
+            # Remove "DATA:" prefix
+            data_payload = data_part.replace("DATA:", "").strip()
+
+            # ==========================
+            # 🔵 PARSE DATA
+            # ==========================
+            parts = data_payload.split(",")
 
             data = {}
             for part in parts:
@@ -220,12 +210,30 @@ async def sensor_reader_task():
             tds = float(data.get("TDS")) if data.get("TDS") else None
             pitch = float(data.get("Pitch")) if data.get("Pitch") else None
             roll = float(data.get("Roll")) if data.get("Roll") else None
+            orient = data.get("Orient")
 
             print(
-                f"📊 Parsed → Temp={temperature}°C pH={ph} "
-                f"TDS={tds} Pitch={pitch} Roll={roll}"
+                f"📊 Temp={temperature} pH={ph} TDS={tds} "
+                f"Pitch={pitch} Roll={roll} Orient={orient}"
             )
 
+            # ==========================
+            # 🔵 PARSE SONAR
+            # ==========================
+            sonar_values = sonar_part.strip().split(",")
+
+            if len(sonar_values) == 3:
+                f_dist = float(sonar_values[0])
+                l_dist = float(sonar_values[1])
+                r_dist = float(sonar_values[2])
+
+                print(f"📏 Sonar → F={f_dist} L={l_dist} R={r_dist}")
+            else:
+                print("⚠️ Bad SONAR format:", sonar_part)
+
+            # ==========================
+            # 🌐 POST TO DATABASE
+            # ==========================
             print("🌐 Posting to database...")
 
             response = post_reading(
@@ -241,19 +249,13 @@ async def sensor_reader_task():
                 roll=roll,
             )
 
-            if response is None:
-                print("⚠️ post_reading returned None")
-            else:
-                print("✅ POST status:", getattr(response, "status_code", "NO STATUS"))
-                try:
-                    print("📨 Response:", response.text[:200])
-                except:
-                    pass
+            if response:
+                print("✅ POST status:", response.status_code)
 
         except Exception as e:
-            print("❌ DATA processing error:", repr(e))
+            print("❌ Parsing error:", repr(e))
 
-        await asyncio.sleep(0.05)
+                await asyncio.sleep(0.05)
 
 # =================================================================
 # === AI LOGIC
