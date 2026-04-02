@@ -27,7 +27,7 @@ ROOM_URL = "wss://pbrobot-ir91vwzj.livekit.cloud"
 TOKEN_URL = "https://pbrobot.onrender.com/getToken?identity=raspberry&roomName=pool"
 
 # --- Arduino (SENSORS ONLY) ---
-ARDUINO_PORT = "/dev/ttyUSB0"
+ARDUINO_PORT = "/dev/ttyUSB1"
 BAUD = 9600
 
 # --- Device metadata ---
@@ -301,7 +301,7 @@ async def ai_navigation_task():
         # MOTOR COMMANDS
         # =========================
         if current_state == "CRUISE":
-            throttle, turn = 0.4, 0.0
+            throttle, turn = 0.8, 0.0
 
         elif current_state == "REVERSE":
             throttle, turn = -0.4, 0.0
