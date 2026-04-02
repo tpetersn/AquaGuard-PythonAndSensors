@@ -234,23 +234,23 @@ async def sensor_reader_task():
             # ==========================
             # 🌐 POST TO DATABASE
             # ==========================
-            print("🌐 Posting to database...")
+            #print("🌐 Posting to database...")
 
-            response = post_reading(
-                DEVICE_ID,
-                temperature=temperature,
-                outtemp=outtemp,
-                ph=ph,
-                chlorine=CHLORINE,
-                tds=tds,
-                battery_voltage=BATTERY_VOLTAGE,
-                battery_percentage=BATTERY_PERCENTAGE,
-                pitch=pitch,
-                roll=roll,
-            )
+            #response = post_reading(
+            #    DEVICE_ID,
+            #    temperature=temperature,
+            #    outtemp=outtemp,
+            #    ph=ph,
+            #    chlorine=CHLORINE,
+            #    tds=tds,
+            #    battery_voltage=BATTERY_VOLTAGE,
+            #    battery_percentage=BATTERY_PERCENTAGE,
+            #    pitch=pitch,
+           #     roll=roll,
+            #)
 
-            if response:
-                print("✅ POST status:", response.status_code)
+           # if response:
+           #     print("✅ POST status:", response.status_code)
 
         except Exception as e:
             print("❌ Parsing error:", repr(e))
