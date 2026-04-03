@@ -301,8 +301,7 @@ async def ai_navigation_task():
         # MOTOR COMMANDS
         # =========================
         if current_state == "CRUISE":
-            throttle, turn = 0.8, 0.0
-            drive_diff(1, 0)
+            throttle, turn = 0.4, 0.0
 
         elif current_state == "REVERSE":
             throttle, turn = -0.4, 0.0
